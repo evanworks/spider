@@ -9,4 +9,4 @@ clone of the classic Windows XP spider solitaire.
 I caught some bugs on the fly
 
 ## February 28
-i've been spinning up some ideas
+i've been spinning up some ideas 
