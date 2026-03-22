@@ -5,6 +5,9 @@ const state = {
   stock: [],
   completed: []
 }
+let history = [];
+let moves = 0;
+let score = 0;
 
 let dragging = {
   active: false,
@@ -65,9 +68,23 @@ function initialDeal() {
       }
       slot[slot.length - 1].faceUp = true;
     }
-
   }
+  state.stock = deck;
+  deck = [];
 }
+function deal() {
+  if (state.tableau.some(col => col.length === 0)) return; // check for empty columns
+
+  for (let i = 0; i < state.tableau.length; i++) {
+    let card = state.stock.pop();
+    card.faceUp = true;
+    state.tableau[i].push(card);
+  }
+
+  cardLogic();
+  renderBoard();
+}
+
 initialDeal();
 
 function cardLogic() {
@@ -76,7 +93,7 @@ function cardLogic() {
     column[column.length - 1].faceUp = true;
 
     if (column.length >= 13) {
-      const run = column.slice(-13); // what is even this
+      const run = column.slice(-13);
 
       for (let i = 0; i < 12; i++) {
         const a = run[i];
@@ -90,12 +107,22 @@ function cardLogic() {
 
       column.splice(-13);
       state.completed.push(run);
-      column[column.length - 1].faceUp = true;
+
+      if (column.length > 0) {
+        column[column.length - 1].faceUp = true;
+      }
     }
   });
+  if (state.completed.length === 8) {
+    winAnimation();
+    document.getElementById("win").style.display = "block";
+  }
 }
 
 function moveCards(fromCol, fromIndex, toCol) {
+  history.push(state.tableau.map(col =>
+    col.map(card => ({ ...card }))
+  ));
   const moved = state.tableau[fromCol].splice(fromIndex);
   state.tableau[toCol].push(...moved);
 }
@@ -136,4 +163,69 @@ function validColumn(x) {
   }
 
   return null;
+}
+
+function undo() {
+  if (history.length === 0) return;
+  console.log(history);
+  state.tableau = history.pop();
+  renderBoard();
+}
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") undo();
+});
+
+function devWin() {
+  state.completed = Array.from({ length: 8 }, () => [new Card(13, "spades")]);
+  state.tableau = Array.from({ length: 10 }, () => []);
+  state.stock = [];
+  cardLogic();
+  renderBoard();
+  winAnimation();
+}
+function winAnimation() {
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:fixed;top:0;left:0;pointer-events:none;z-index:1";
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+
+  const cards = Array.from({ length: 40 }, (_, i) => ({
+    x: Math.random() * canvas.width,
+    y: -100 - (i * 60),  // stagger start positions
+    vx: (Math.random() - 0.5) * 16,
+    vy: Math.random() * 4 + 2,
+    img: new Image(),
+  }));
+
+  cards.forEach(c => {
+    const rank = Math.floor(Math.random() * 13) + 1;
+    const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+    c.img.src = `res/img/${suit}${rank}.png`;
+  });
+
+  function animate() {
+    for (let i = cards.length - 1; i >= 0; i--) {
+      let c = cards[i];
+      c.vy += 0.3;
+      c.x += c.vx;
+      c.y += c.vy;
+
+      if (c.y + 97 > canvas.height) {
+        c.y = canvas.height - 97;
+        c.vy *= -0.6;
+        c.vx += (Math.random() - 0.5) * 2;
+
+        if (Math.abs(c.vy) < 1.5) {
+          cards.splice(i, 1);
+          continue;
+        }
+      }
+      ctx.drawImage(c.img, c.x, c.y, 71, 97);
+    }
+    requestAnimationFrame(animate);
+  }
+  animate();
 }

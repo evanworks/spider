@@ -8,17 +8,38 @@ body {
     background-image: url("img/felt.png");
     background-repeat: repeat;
     background-size: 64px 64px;
+    overflow: hidden;
 }
 #top {
     width: 100vw;
     height: 20px;
     background: white;
     padding-top: 4px;
+    padding-left: 4px;
+}
+span {
+    font-size: 14px;
+    margin-left: 10px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+span:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
 }
 #board {
     width: 100vw;
     height: 85vh;
     display: flex;
+}
+.stock {
+    position: fixed;
+    bottom: 10px;
+    cursor: pointer;
+}
+.completed {
+    position: fixed;
+    bottom: 10px;
 }
 .column {
     position: relative;
@@ -28,9 +49,54 @@ body {
 }
 .card {
     position: absolute;
+    cursor: grab;
 }
 .dragging {
     position: fixed;
     z-index: 1000;
-    pointer-events: none;
+    cursor: grabbing;
+}
+#scoreBox {
+    width: 200px;
+    height: 100px;
+    position: fixed;
+    left: calc(50% - 175px);
+    bottom: 16px;
+    background: #007f00;
+    border: 1px solid black;
+    color: white;
+    display: grid;
+    place-items: center;
+}
+#moves {
+    margin-top: -30px;
+}
+
+#win {
+    width: 350px;
+    height: 200px;
+    position: fixed;
+    left: calc(50% - 175px);
+    top: calc(50% - 100px);
+    text-align: center;
+    z-index: 2;
+}
+#win > div {
+    font-size: 64px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    animation: rainbow 12s infinite;
+    -webkit-text-stroke: 2px white;
+}
+@keyframes rainbow {
+    0%   { color: hsl(0,   100%, 55%); }
+    16%  { color: hsl(60,  100%, 50%); }
+    33%  { color: hsl(120, 100%, 45%); }
+    50%  { color: hsl(180, 100%, 45%); }
+    66%  { color: hsl(240, 100%, 65%); }
+    83%  { color: hsl(300, 100%, 60%); }
+    100% { color: hsl(360, 100%, 55%); }
+}
+canvas {
+    image-rendering: pixelated;
 }

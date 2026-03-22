@@ -18,6 +18,11 @@ function renderCard(card, column, i) {
 function renderColumn(column, columnIndex) {
   const el = document.createElement("div");
   el.classList.add("column");
+  const emptyEl = document.createElement("img");
+  emptyEl.classList.add("card");
+  emptyEl.src = "res/img/empty.png";
+
+  el.appendChild(emptyEl);
 
   let offsets = 0;
   column.forEach((card, i) => {
@@ -32,14 +37,6 @@ function renderColumn(column, columnIndex) {
     }
   });
 
-  if (state.tableau[columnIndex].length === 0) {
-    const emptyEl = document.createElement("img");
-    emptyEl.classList.add("card");
-    emptyEl.src = "res/img/empty.png";
-
-    el.appendChild(emptyEl);
-  }
-
   return el;
 }
 
@@ -51,6 +48,31 @@ function renderBoard() {
     const el = renderColumn(column, i);
     board.appendChild(el)
   });
+
+  if (state.stock.length > 0) {
+    const stock = document.createElement("div");
+    for (let i = 0; i < Math.floor(state.stock.length / 10); i++) {
+      const back = document.createElement("img");
+      back.classList.add("stock");
+      back.style.right = 24 + i*9 + "px";
+      back.onclick = () => deal();
+      back.src = `res/img/back0.png`;
+      stock.appendChild(back);
+    }
+    board.appendChild(stock);
+  }
+  if (state.completed.length > 0) {
+    const completed = document.createElement("div");
+    for (let i = 0; i < state.completed.length; i++) {
+      const king = document.createElement("img");
+      king.classList.add("completed");
+      king.style.left = 24 + i*12 + "px";
+      king.onclick = () => { alert("good job??!?"); }
+      king.src = `res/img/${state.completed[i][0].suit}13.png`;
+      completed.appendChild(king);
+    }
+    board.appendChild(completed);
+  }
 }
 
 function startDrag(e) {
