@@ -1,3 +1,4 @@
+"use strict";
 
 let deck = [];
 const state = {
@@ -18,7 +19,7 @@ let dragging = {
   cards: [],
 }
 
-const SUITS = ["spades", /*"hearts", "diamonds", "spades"*/ "spades", "hearts", "hearts"]
+const SUITS = ["spades", /*"hearts", "diamonds", "spades"*/ "spades", "spades", "spades"]
 
 class Card {
   constructor(rank, suit) {
@@ -26,20 +27,21 @@ class Card {
     this.suit = suit;
     this.faceUp = false;
     this.id = crypto.randomUUID();
+    this.scored = false;
   }
 }
 
 function createDeck() {
-  let deck = [];
+  let awesomeDeck = [];
   for (let x = 0; x < 2; x++) {
     for (let i = 0; i < SUITS.length; i++) {
       for (let j = 1; j < 14; j++) {
-        deck.push(new Card(j, SUITS[i]));
+        awesomeDeck.push(new Card(j, SUITS[i]));
       }
     }
   }
 
-  return deck;
+  return awesomeDeck;
 }
 function shuffle(deck) {
   for (let i = deck.length - 1; i > 0; i--) {
@@ -90,7 +92,11 @@ initialDeal();
 function cardLogic() {
   state.tableau.forEach(column => {
     if (column.length < 1) return;
-    column[column.length - 1].faceUp = true;
+
+    if (!column[column.length - 1].faceUp) {
+      column[column.length - 1].faceUp = true;
+      score += 10;
+    }
 
     if (column.length >= 13) {
       const run = column.slice(-13);
@@ -106,10 +112,15 @@ function cardLogic() {
       if (run[12].rank !== 1) return; // final check
 
       column.splice(-13);
+      score += 50;
       state.completed.push(run);
 
       if (column.length > 0) {
-        column[column.length - 1].faceUp = true;
+        const top = column[column.length - 1];
+        if (!top.faceUp) {
+          top.faceUp = true;
+          score += 10;
+        }
       }
     }
   });
@@ -120,11 +131,32 @@ function cardLogic() {
 }
 
 function moveCards(fromCol, fromIndex, toCol) {
-  history.push(state.tableau.map(col =>
-    col.map(card => ({ ...card }))
-  ));
-  const moved = state.tableau[fromCol].splice(fromIndex);
+  history.push({
+    tableau: state.tableau.map(col =>
+      col.map(card => ({ ...card }))
+    ),
+    score
+  });
+  const hadFaceDown = state.tableau[fromCol].some(card => !card.faceUp);
+
+  const moved = state.tableau[fromCol].slice(fromIndex);
+  if (state.tableau[toCol].length > 0) {
+    const target = state.tableau[toCol][state.tableau[toCol].length - 1];
+    if (target.rank === moved[0].rank + 1 &&  target.suit === moved[0].suit &&  moved[0].scored === false) {
+      score += 2;
+      moved[0].scored = true;
+    }
+  }
+
+  state.tableau[fromCol].splice(fromIndex);
   state.tableau[toCol].push(...moved);
+
+  const allNowRevealed = !state.tableau[fromCol].some(card => !card.faceUp);
+  if (hadFaceDown && allNowRevealed && state.tableau[fromCol].length > 0) {
+    score += 15;
+  }
+
+  cardLogic();
 }
 
 function validPickup(column, index) {
@@ -167,22 +199,15 @@ function validColumn(x) {
 
 function undo() {
   if (history.length === 0) return;
-  console.log(history);
-  state.tableau = history.pop();
+  let prev = history.pop();
+  state.tableau = prev.tableau;
+  score = prev.score;
   renderBoard();
 }
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "z") undo();
 });
 
-function devWin() {
-  state.completed = Array.from({ length: 8 }, () => [new Card(13, "spades")]);
-  state.tableau = Array.from({ length: 10 }, () => []);
-  state.stock = [];
-  cardLogic();
-  renderBoard();
-  winAnimation();
-}
 function winAnimation() {
   const canvas = document.createElement("canvas");
   canvas.style.cssText = "position:fixed;top:0;left:0;pointer-events:none;z-index:1";
@@ -223,8 +248,10 @@ function winAnimation() {
           continue;
         }
       }
-      ctx.drawImage(c.img, c.x, c.y, 71, 97);
+      ctx.drawImage(c.img, Math.round(c.x), Math.round(c.y), 71, 97);
     }
+
+    if (cards.length === 0) return;
     requestAnimationFrame(animate);
   }
   animate();

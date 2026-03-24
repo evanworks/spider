@@ -1,3 +1,5 @@
+"use strict";
+
 function renderCard(card, column, i) {
   const el = document.createElement("img");
   el.classList.add("card");
@@ -55,7 +57,7 @@ function renderBoard() {
       const back = document.createElement("img");
       back.classList.add("stock");
       back.style.right = 24 + i*9 + "px";
-      back.onclick = () => deal();
+      back.onclick = () => { deal() };
       back.src = `res/img/back0.png`;
       stock.appendChild(back);
     }
@@ -73,6 +75,9 @@ function renderBoard() {
     }
     board.appendChild(completed);
   }
+
+  document.getElementById("score").innerHTML = "Score: " + score;
+  document.getElementById("moves").innerHTML = "Moves: " + moves;
 }
 
 function startDrag(e) {
