@@ -19,7 +19,7 @@ let dragging = {
   cards: [],
 }
 
-const SUITS = ["spades", /*"hearts", "diamonds", "spades"*/ "spades", "spades", "spades"]
+const SUITS = ["spades", /*"hearts", "diamonds", "spades"*/ "spades", "hearts", "hearts"]
 
 class Card {
   constructor(rank, suit) {
@@ -27,7 +27,6 @@ class Card {
     this.suit = suit;
     this.faceUp = false;
     this.id = crypto.randomUUID();
-    this.scored = false;
   }
 }
 
@@ -74,20 +73,28 @@ function initialDeal() {
   state.stock = deck;
   deck = [];
 }
+initialDeal();
+
 function deal() {
   if (state.tableau.some(col => col.length === 0)) return; // check for empty columns
 
   for (let i = 0; i < state.tableau.length; i++) {
     let card = state.stock.pop();
+    if (!card) return;
     card.faceUp = true;
     state.tableau[i].push(card);
   }
+  history.push({
+    tableau: state.tableau.map(col =>
+      col.map(card => Object.assign(new Card(), card))
+    ),
+    score
+  });
 
   cardLogic();
   renderBoard();
 }
 
-initialDeal();
 
 function cardLogic() {
   state.tableau.forEach(column => {
@@ -112,7 +119,7 @@ function cardLogic() {
       if (run[12].rank !== 1) return; // final check
 
       column.splice(-13);
-      score += 50;
+      score += 26;
       state.completed.push(run);
 
       if (column.length > 0) {
@@ -131,32 +138,83 @@ function cardLogic() {
 }
 
 function moveCards(fromCol, fromIndex, toCol) {
+  moves++;
   history.push({
     tableau: state.tableau.map(col =>
-      col.map(card => ({ ...card }))
+      col.map(card => Object.assign(new Card(), card))
     ),
     score
   });
   const hadFaceDown = state.tableau[fromCol].some(card => !card.faceUp);
 
   const moved = state.tableau[fromCol].slice(fromIndex);
-  if (state.tableau[toCol].length > 0) {
-    const target = state.tableau[toCol][state.tableau[toCol].length - 1];
-    if (target.rank === moved[0].rank + 1 &&  target.suit === moved[0].suit &&  moved[0].scored === false) {
-      score += 2;
-      moved[0].scored = true;
-    }
-  }
 
   state.tableau[fromCol].splice(fromIndex);
   state.tableau[toCol].push(...moved);
 
-  const allNowRevealed = !state.tableau[fromCol].some(card => !card.faceUp);
-  if (hadFaceDown && allNowRevealed && state.tableau[fromCol].length > 0) {
-    score += 15;
+  // this will be a nightmare to debug if it comes to it
+  const first = moved[0];
+  if (!first.scored) {
+    let stackPoints = 0;
+    for (let i = 0; i < moved.length - 1; i++) {
+      const a = moved[i];
+      const b = moved[i + 1];
+      if (a.rank === b.rank + 1 && a.suit === b.suit) {
+        stackPoints += 2;
+      } else {
+        break;
+      }
+    }
+
+    const below = state.tableau[toCol][state.tableau[toCol].length - moved.length - 1];
+    if (below && below.rank === moved[0].rank + 1 && below.suit === moved[0].suit) {
+      stackPoints += 2;
+    }
+    score += stackPoints;
+    first.scored = true;
   }
 
   cardLogic();
+
+  const allNowRevealed = !state.tableau[fromCol].some(card => !card.faceUp);
+  console.log(hadFaceDown);
+  console.log(allNowRevealed);
+  if (hadFaceDown && allNowRevealed && state.tableau[fromCol].length > 0) {
+    score += 15;
+  }
+}
+function hint() {
+  let hints = [];
+
+  for (let fromCol = 0; fromCol < state.tableau.length; fromCol++) {
+    let col = state.tableau[fromCol];
+    for (let i = 0; i < col.length; i++) {
+      if (validPickup(fromCol, i)) {
+        for (let toCol = 0; toCol < state.tableau.length; toCol++) {
+          if (validDrop(fromCol, i, toCol) && col[i].suit === state.tableau[toCol].at(-1).suit) {
+            hints.push({fromCard: col[i], toCard: state.tableau[toCol].at(-1)});
+          }
+        }
+      }
+    }
+  }
+
+  if (hints.length === 0) return;
+  let hint = hints[Math.floor(Math.random() * hints.length)];
+  const fromCard = document.getElementById(hint.fromCard.id);
+  const toCard = document.getElementById(hint.toCard.id);
+
+
+  fromCard.style.filter = "invert(1)";
+
+  setTimeout(() => {
+    toCard.style.filter = "invert(1)";
+    fromCard.style.filter = "invert(0)";
+    setTimeout(() => {
+      toCard.style.filter = "invert(0)";
+    }, 500)
+
+  }, 500)
 }
 
 function validPickup(column, index) {

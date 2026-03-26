@@ -9,7 +9,10 @@
     <body>
     <div id="win" style="display: none;"><div>You Won!</div><button onclick="location.reload();">Restart</button></div>
     <div id="scoreBox"><div id="score">Score: 0</div><div id="moves">Moves: 0</div></div>
-    <div id="top"><span onclick="undo()">Undo Move (Ctrl + Z)</span><span style="float: right; margin-right: 10px;">© Evan Lee 2026</span></div>
+    <div id="top">
+        <span onclick="hint()">Hint</span>
+        <span onclick="undo()">Undo Move (Ctrl + Z)</span>
+        <span style="float: right; margin-right: 10px;">© Evan Lee 2026</span></div>
     <div id="board">
 
     </div>
