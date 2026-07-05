@@ -9,11 +9,11 @@ function renderCard(card, column, i) {
   el.dataset.index = i;
 
   if (card.faceUp) {
-    el.src = `res/img/${card.suit + card.rank}.png`
+    el.src = `res/img/${card.suit + card.rank}.png`;
   } else {
     el.src = "res/img/back0.png";
   }
-  el.addEventListener("mousedown", startDrag)
+  el.addEventListener("mousedown", startDrag);
   return el;
 }
 
@@ -48,7 +48,7 @@ function renderBoard() {
 
   state.tableau.forEach((column, i) => {
     const el = renderColumn(column, i);
-    board.appendChild(el)
+    board.appendChild(el);
   });
 
   if (state.stock.length > 0) {
@@ -56,8 +56,10 @@ function renderBoard() {
     for (let i = 0; i < Math.floor(state.stock.length / 10); i++) {
       const back = document.createElement("img");
       back.classList.add("stock");
-      back.style.right = 24 + i*9 + "px";
-      back.onclick = () => { deal() };
+      back.style.right = 24 + i * 9 + "px";
+      back.onclick = () => {
+        deal();
+      };
       back.src = `res/img/back0.png`;
       stock.appendChild(back);
     }
@@ -68,8 +70,10 @@ function renderBoard() {
     for (let i = 0; i < state.completed.length; i++) {
       const king = document.createElement("img");
       king.classList.add("completed");
-      king.style.left = 24 + i*12 + "px";
-      king.onclick = () => { alert("good job??!?"); }
+      king.style.left = 24 + i * 12 + "px";
+      king.onclick = () => {
+        alert("good job??!?");
+      };
       king.src = `res/img/${state.completed[i][0].suit}13.png`;
       completed.appendChild(king);
     }
@@ -81,7 +85,6 @@ function renderBoard() {
 }
 
 function startDrag(e) {
-
   e.preventDefault();
   const column = Number(e.target.dataset.column);
   const index = Number(e.target.dataset.index);
@@ -117,20 +120,20 @@ function dragMove(e) {
 
   const cards = document.querySelectorAll(".dragging");
   cards.forEach((card, i) => {
-    card.style.left = (e.pageX - dragging.offsetX - 1) + "px";
-    card.style.top = (e.pageY - dragging.offsetY - 1) + i * 27.5 + "px";
-  })
+    card.style.left = e.pageX - dragging.offsetX - 1 + "px";
+    card.style.top = e.pageY - dragging.offsetY - 1 + i * 27.5 + "px";
+  });
 }
 
 function endDrag(e) {
-  console.log("this has to end.")
+  console.log("this has to end.");
 
   if (!dragging.active) return;
 
   const column = validColumn(e.clientX);
 
   if (column !== null && validDrop(dragging.column, dragging.index, column)) {
-    moveCards(dragging.column, dragging.index, column)
+    moveCards(dragging.column, dragging.index, column);
   }
 
   dragging.active = false;
@@ -139,7 +142,7 @@ function endDrag(e) {
 
   const cards = document.querySelectorAll(".dragging");
 
-  cards.forEach(card => {
+  cards.forEach((card) => {
     card.classList.remove("dragging");
     card.style.left = "";
     card.style.top = "";
