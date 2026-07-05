@@ -127,7 +127,7 @@ function endDrag(e) {
 
   if (!dragging.active) return;
 
-  const column = validColumn(e.pageX);
+  const column = validColumn(e.clientX);
 
   if (column !== null && validDrop(dragging.column, dragging.index, column)) {
     moveCards(dragging.column, dragging.index, column)
