@@ -1,7 +1,17 @@
 "use strict";
 
+function mulberry32(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 let deck = [];
-const state = {
+let seed = crypto.getRandomValues(new Uint32Array(1))[0];
+const random = mulberry32(seed);
+let state = {
   tableau: [ [], [], [], [], [], [], [], [], [], [] ], // this is ridiculous
   stock: [],
   completed: []
@@ -18,6 +28,7 @@ let dragging = {
   index: null,
   cards: [],
 }
+let hinting = false;
 
 const SUITS = ["spades", /*"hearts", "diamonds", "spades"*/ "spades", "hearts", "hearts"]
 
@@ -42,13 +53,15 @@ function createDeck() {
 
   return awesomeDeck;
 }
+
 function shuffle(deck) {
   for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   return deck;
 }
+
 
 deck = createDeck();
 deck = shuffle(deck);
@@ -84,12 +97,7 @@ function deal() {
     card.faceUp = true;
     state.tableau[i].push(card);
   }
-  history.push({
-    tableau: state.tableau.map(col =>
-      col.map(card => Object.assign(new Card(), card))
-    ),
-    score
-  });
+  history.push(snapshot());
 
   cardLogic();
   renderBoard();
@@ -138,15 +146,10 @@ function cardLogic() {
 }
 
 function moveCards(fromCol, fromIndex, toCol) {
+  history.push(snapshot());
   moves++;
-  history.push({
-    tableau: state.tableau.map(col =>
-      col.map(card => Object.assign(new Card(), card))
-    ),
-    score
-  });
-  const hadFaceDown = state.tableau[fromCol].some(card => !card.faceUp);
 
+  const hadFaceDown = state.tableau[fromCol].some(card => !card.faceUp);
   const moved = state.tableau[fromCol].slice(fromIndex);
 
   state.tableau[fromCol].splice(fromIndex);
@@ -177,13 +180,12 @@ function moveCards(fromCol, fromIndex, toCol) {
   cardLogic();
 
   const allNowRevealed = !state.tableau[fromCol].some(card => !card.faceUp);
-  console.log(hadFaceDown);
-  console.log(allNowRevealed);
   if (hadFaceDown && allNowRevealed && state.tableau[fromCol].length > 0) {
     score += 15;
   }
 }
 function hint() {
+  if (hinting) return;
   let hints = [];
 
   for (let fromCol = 0; fromCol < state.tableau.length; fromCol++) {
@@ -191,8 +193,8 @@ function hint() {
     for (let i = 0; i < col.length; i++) {
       if (validPickup(fromCol, i)) {
         for (let toCol = 0; toCol < state.tableau.length; toCol++) {
-          if (validDrop(fromCol, i, toCol) && col[i].suit === state.tableau[toCol].at(-1).suit) {
-            hints.push({fromCard: col[i], toCard: state.tableau[toCol].at(-1)});
+          if (validDrop(toCol.length > 0 && fromCol, i, toCol) && col[i].suit === state.tableau[toCol].at(-1).suit) {
+            hints.push({col, pos: i, toCard: state.tableau[toCol].at(-1)});
           }
         }
       }
@@ -200,20 +202,25 @@ function hint() {
   }
 
   if (hints.length === 0) return;
-  let hint = hints[Math.floor(Math.random() * hints.length)];
-  const fromCard = document.getElementById(hint.fromCard.id);
+  hinting = true;
+
+  let hint = hints[Math.floor(random() * hints.length)];
+  let distance = hint.col.length - hint.pos;
+
   const toCard = document.getElementById(hint.toCard.id);
 
-
-  fromCard.style.filter = "invert(1)";
+  for (let i = 0; i < distance; i++) {
+    let el = document.getElementById(hint.col[hint.pos + i].id);
+    el.style.filter = "invert(1)";
+    setTimeout(() => { el.style.filter = "invert(0)"; }, 500)
+  }
 
   setTimeout(() => {
     toCard.style.filter = "invert(1)";
-    fromCard.style.filter = "invert(0)";
     setTimeout(() => {
       toCard.style.filter = "invert(0)";
+      hinting = false;
     }, 500)
-
   }, 500)
 }
 
@@ -255,11 +262,27 @@ function validColumn(x) {
   return null;
 }
 
+function snapshot() {
+  return {
+    tableau: state.tableau.map(col =>
+      col.map(card => Object.assign(new Card(), card))
+    ),
+    stock: state.stock.map(card => Object.assign(new Card(), card)),
+    completed: state.completed.map(run =>
+      run.map(card => Object.assign(new Card(), card))
+    ),
+    score,
+    moves
+  };
+}
 function undo() {
   if (history.length === 0) return;
   let prev = history.pop();
   state.tableau = prev.tableau;
+  state.stock = prev.stock;
+  state.completed = prev.completed;
   score = prev.score;
+  moves = prev.moves;
   renderBoard();
 }
 document.addEventListener("keydown", e => {
@@ -276,16 +299,16 @@ function winAnimation() {
   ctx.imageSmoothingEnabled = false;
 
   const cards = Array.from({ length: 40 }, (_, i) => ({
-    x: Math.random() * canvas.width,
+    x: random() * canvas.width,
     y: -100 - (i * 60),  // stagger start positions
-    vx: (Math.random() - 0.5) * 16,
-    vy: Math.random() * 4 + 2,
+    vx: (random() - 0.5) * 16,
+    vy: random() * 4 + 2,
     img: new Image(),
   }));
 
   cards.forEach(c => {
-    const rank = Math.floor(Math.random() * 13) + 1;
-    const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
+    const rank = Math.floor(random() * 13) + 1;
+    const suit = SUITS[Math.floor(random() * SUITS.length)];
     c.img.src = `res/img/${suit}${rank}.png`;
   });
 
@@ -299,7 +322,7 @@ function winAnimation() {
       if (c.y + 97 > canvas.height) {
         c.y = canvas.height - 97;
         c.vy *= -0.6;
-        c.vx += (Math.random() - 0.5) * 2;
+        c.vx += (random() - 0.5) * 2;
 
         if (Math.abs(c.vy) < 1.5) {
           cards.splice(i, 1);
